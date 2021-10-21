@@ -32,7 +32,6 @@ const constants_1 = require("./constants");
 async function execMigrator() {
     var _a;
     try {
-        const tmpDir = os.tmpdir();
         console.log('\n----- AZURE DEVOPS - GIT MIGRATOR -----\n');
         const { organization } = await inquirer.prompt([
             {
@@ -71,7 +70,7 @@ async function execMigrator() {
                 choices: availableSrcRepositories.map((p) => p.name),
             }
         ]);
-        const cloneRepositoryPath = path.join(tmpDir, `${srcRepository}.git`);
+        const cloneRepositoryPath = path.join(os.tmpdir(), `${srcRepository}.git`);
         shell.exec(`git clone --mirror ${(_a = availableSrcRepositories.find(r => r.name === srcRepository)) === null || _a === void 0 ? void 0 : _a.sshUrl} ${cloneRepositoryPath}`);
         const { dstProjectName } = await inquirer.prompt([
             {

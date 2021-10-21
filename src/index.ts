@@ -11,7 +11,6 @@ import { accessTokenQuestion, dstProjectQuestion, dstRepositoryQuestion, newSrcR
 
 async function execMigrator() {
   try {
-    const tmpDir = os.tmpdir();
     console.log('\n----- AZURE DEVOPS - GIT MIGRATOR -----\n');
 
     const { organization } = await inquirer.prompt([
@@ -55,7 +54,7 @@ async function execMigrator() {
       }
     ]);
 
-    const cloneRepositoryPath = path.join(tmpDir, `${srcRepository}.git`);
+    const cloneRepositoryPath = path.join(os.tmpdir(), `${srcRepository}.git`);
     shell.exec(`git clone --mirror ${availableSrcRepositories.find(r => r.name === srcRepository)?.sshUrl} ${cloneRepositoryPath}`);
 
     const { dstProjectName } = await inquirer.prompt([
