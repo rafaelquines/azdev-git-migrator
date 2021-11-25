@@ -7,7 +7,9 @@ import Format from 'string-format';
 import * as shell from 'shelljs';
 import * as os from 'os';
 import * as path from 'path';
-import { accessTokenQuestion, dstProjectQuestion, dstRepositoryQuestion, newSrcRepositoryName, orgQuestion, orgUrlPattern, renameSrcRepositoryQuestion, srcProjectQuestion, srcRepositoryQuestion } from './constants';
+import { accessTokenQuestion, dstProjectQuestion, dstRepositoryQuestion, newSrcRepositoryNameQuestion, orgQuestion, orgUrlPattern, renameSrcRepositoryQuestion, srcProjectQuestion, srcRepositoryQuestion } from './constants';
+
+const inactivedRepositoriesPattern = "_MIGRATED";
 
 async function execMigrator() {
   try {
@@ -33,6 +35,7 @@ async function execMigrator() {
     const webApi = await getWebApi(orgUrl, personalAccessToken);
     const coreApi = await webApi.getCoreApi();
     const gitApi = await webApi.getGitApi();
+    // const buildApi = await webApi.getBuildApi();
 
     const availableSrcProjects = await listProjects(coreApi);
     const { srcProjectName } = await inquirer.prompt([
@@ -44,18 +47,17 @@ async function execMigrator() {
       }
     ]);
 
-    const availableSrcRepositories = await listRepositories(gitApi, srcProjectName);
-    const { srcRepository } = await inquirer.prompt([
+    // console.log('Builds: ', await buildApi.getDefinitions(srcProjectName));
+
+    const availableSrcRepositories = await listRepositories(gitApi, srcProjectName, true);
+    const { srcRepositories } = await inquirer.prompt([
       {
-        type: 'list',
-        name: 'srcRepository',
+        type: 'checkbox',
+        name: 'srcRepositories',
         message: srcRepositoryQuestion,
         choices: availableSrcRepositories.map((p) => p.name),
       }
     ]);
-
-    const cloneRepositoryPath = path.join(os.tmpdir(), `${srcRepository}.git`);
-    shell.exec(`git clone --mirror ${availableSrcRepositories.find(r => r.name === srcRepository)?.sshUrl} ${cloneRepositoryPath}`);
 
     const { dstProjectName } = await inquirer.prompt([
       {
@@ -66,66 +68,51 @@ async function execMigrator() {
       }
     ]);
 
-    const { dstRepository } = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'dstRepository',
-        message: dstRepositoryQuestion,
-        default: srcRepository,
-        validate: async (input): Promise<boolean | string> => {
-          const reposInProject = await listRepositories(gitApi, dstProjectName);
-          const exists = reposInProject.find((r) => r.name === input) !== undefined;
-          if (exists) {
-            return `${input} repository already exists in project ${dstProjectName}!`;
-          }
-          return true;
-        },
-      },
-    ]);
+    for await (const srcRepository of srcRepositories) {
+      const cloneRepositoryPath = path.join(os.tmpdir(), `${srcRepository}.git`);
+      shell.exec(`git clone --mirror ${availableSrcRepositories.find(r => r.name === srcRepository)?.sshUrl} ${cloneRepositoryPath}`);
 
-    console.log(`Creating repository ${dstRepository} in project ${dstProjectName}...`);
-    const oldRepo = availableSrcRepositories.find((r) => r.name === srcRepository);
-    const newRepo = await createRepository(webApi, dstRepository, dstProjectName);
-    console.log('Repository created successfully!');
-
-    console.log('Updating repository...');
-
-    shell.exec(`cd ${cloneRepositoryPath} && git push --mirror ${newRepo.sshUrl} && cd -`);
-    console.log(`\n\nClone URLs:\n\tHTTPS: ${newRepo.remoteUrl}\n\tSSH: ${newRepo.sshUrl}\n\n`)
-
-    const { willRename } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'willRename',
-        message: renameSrcRepositoryQuestion,
-      },
-    ]);
-
-    if (willRename) {
-      const { newSrcRepoName } = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'newSrcRepoName',
-          message: newSrcRepositoryName,
-          default: `${srcRepository}_MIGRATED`,
-          validate: async (input): Promise<boolean | string> => {
-            const reposInProject = await listRepositories(gitApi, srcProjectName);
-            const exists = reposInProject.find((r) => r.name === input) !== undefined;
-            if (exists) {
-              return `${input} repository already exists in project ${srcProjectName}!`;
-            }
-            return true;
-          },
-        },
-      ]);
-
+      const dstRepository = srcRepository;
+      console.log(`Creating repository ${dstRepository} in project ${dstProjectName}...`);
+      const newRepo = await createRepository(webApi, dstRepository, dstProjectName);
+      console.log(`Repository ${newRepo.name} created successfully!`);
+      console.log('Updating repository...');
+      shell.exec(`cd ${cloneRepositoryPath} && git push --mirror ${newRepo.sshUrl} && cd -`);
+      console.log(`\n\nClone URLs:\n\tHTTPS: ${newRepo.remoteUrl}\n\tSSH: ${newRepo.sshUrl}\n\n`)
+      const newSrcRepositoryName = `${srcRepository}_MIGRATED_TO_${dstProjectName}`;
       console.log('Renaming Source Repository...');
-      await renameRepository(webApi, oldRepo!.id, newSrcRepoName, srcProjectName);
+      const oldRepo = availableSrcRepositories.find((r) => r.name === srcRepository);
+      await renameRepository(webApi, oldRepo!.id, newSrcRepositoryName, srcProjectName);
+      console.log('Deleting local repository...');
+      shell.exec(`rm -rf ${cloneRepositoryPath}`)
     }
-
-    console.log('Deleting local project...');
-    shell.exec(`rm -rf ${cloneRepositoryPath}`)
     console.log('Migration completed successfully');
+
+    // if (willRename) {
+    //   const { newSrcRepoName } = await inquirer.prompt([
+    //     {
+    //       type: 'input',
+    //       name: 'newSrcRepoName',
+    //       message: newSrcRepositoryName,
+    //       default: `${srcRepository}_MIGRATED`,
+    //       validate: async (input): Promise<boolean | string> => {
+    //         const reposInProject = await listRepositories(gitApi, srcProjectName);
+    //         const exists = reposInProject.find((r) => r.name === input) !== undefined;
+    //         if (exists) {
+    //           return `${input} repository already exists in project ${srcProjectName}!`;
+    //         }
+    //         return true;
+    //       },
+    //     },
+    //   ]);
+
+    //   console.log('Renaming Source Repository...');
+    //   await renameRepository(webApi, oldRepo!.id, newSrcRepoName, srcProjectName);
+    // }
+
+    // console.log('Deleting local project...');
+    // shell.exec(`rm -rf ${cloneRepositoryPath}`)
+    // console.log('Migration completed successfully');
   } catch (err) {
     console.log('Error', err);
   }
@@ -169,8 +156,11 @@ function getShortDescription(project: TeamProjectReference) {
   return project.description.length <= 100 ? project.description : project.description.substr(0, 100);
 }
 
-async function listRepositories(gitApi: GitApi, projectName: string) {
-  const repositories = await gitApi.getRepositories(projectName);
+async function listRepositories(gitApi: GitApi, projectName: string, filter = false) {
+  let repositories = await gitApi.getRepositories(projectName);
+  if (filter) {
+    repositories = repositories.filter((r) => r.name?.indexOf(inactivedRepositoriesPattern) !== -1);
+  }
   return repositories.sort((a, b) => a.name! > b.name! && 1 || -1);
 }
 

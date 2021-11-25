@@ -7,5 +7,5 @@ export const srcRepositoryQuestion = "Source Repository:"
 export const dstProjectQuestion = "Destiny Project:"
 export const dstRepositoryQuestion = "Destiny Repository:"
 export const renameSrcRepositoryQuestion = "Rename Source Repository?"
-export const newSrcRepositoryName = "New Source Repository Name:"
+export const newSrcRepositoryNameQuestion = "New Source Repository Name:"
 export const orgUrlPattern = 'https://dev.azure.com/{org}';
