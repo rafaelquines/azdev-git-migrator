@@ -159,7 +159,7 @@ function getShortDescription(project: TeamProjectReference) {
 async function listRepositories(gitApi: GitApi, projectName: string, filter = false) {
   let repositories = await gitApi.getRepositories(projectName);
   if (filter) {
-    repositories = repositories.filter((r) => r.name?.indexOf(inactivedRepositoriesPattern) !== -1);
+    repositories = repositories.filter((r) => r.name?.indexOf(inactivedRepositoriesPattern) === -1);
   }
   return repositories.sort((a, b) => a.name! > b.name! && 1 || -1);
 }

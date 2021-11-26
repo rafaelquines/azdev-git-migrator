@@ -25,8 +25,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const azdev = __importStar(require("azure-devops-node-api"));
 const inquirer = __importStar(require("inquirer"));
 const string_format_1 = __importDefault(require("string-format"));
+const shell = __importStar(require("shelljs"));
+const os = __importStar(require("os"));
+const path = __importStar(require("path"));
 const constants_1 = require("./constants");
+const inactivedRepositoriesPattern = "_MIGRATED";
 async function execMigrator() {
+    var _a;
     try {
         console.log('\n----- AZURE DEVOPS - GIT MIGRATOR -----\n');
         const { organization } = await inquirer.prompt([
@@ -59,7 +64,7 @@ async function execMigrator() {
             }
         ]);
         // console.log('Builds: ', await buildApi.getDefinitions(srcProjectName));
-        const availableSrcRepositories = await listRepositories(gitApi, srcProjectName);
+        const availableSrcRepositories = await listRepositories(gitApi, srcProjectName, true);
         const { srcRepositories } = await inquirer.prompt([
             {
                 type: 'checkbox',
@@ -68,47 +73,32 @@ async function execMigrator() {
                 choices: availableSrcRepositories.map((p) => p.name),
             }
         ]);
-        console.log(srcRepositories);
-        // const cloneRepositoryPath = path.join(os.tmpdir(), `${srcRepository}.git`);
-        // shell.exec(`git clone --mirror ${availableSrcRepositories.find(r => r.name === srcRepository)?.sshUrl} ${cloneRepositoryPath}`);
-        // const { dstProjectName } = await inquirer.prompt([
-        //   {
-        //     type: 'list',
-        //     name: 'dstProjectName',
-        //     message: dstProjectQuestion,
-        //     choices: buildProjectList(availableSrcProjects.filter((p) => p.name !== srcProjectName)),
-        //   }
-        // ]);
-        // const { dstRepository } = await inquirer.prompt([
-        //   {
-        //     type: 'input',
-        //     name: 'dstRepository',
-        //     message: dstRepositoryQuestion,
-        //     default: srcRepository,
-        //     validate: async (input): Promise<boolean | string> => {
-        //       const reposInProject = await listRepositories(gitApi, dstProjectName);
-        //       const exists = reposInProject.find((r) => r.name === input) !== undefined;
-        //       if (exists) {
-        //         return `${input} repository already exists in project ${dstProjectName}!`;
-        //       }
-        //       return true;
-        //     },
-        //   },
-        // ]);
-        // console.log(`Creating repository ${dstRepository} in project ${dstProjectName}...`);
-        // const oldRepo = availableSrcRepositories.find((r) => r.name === srcRepository);
-        // const newRepo = await createRepository(webApi, dstRepository, dstProjectName);
-        // console.log('Repository created successfully!');
-        // console.log('Updating repository...');
-        // shell.exec(`cd ${cloneRepositoryPath} && git push --mirror ${newRepo.sshUrl} && cd -`);
-        // console.log(`\n\nClone URLs:\n\tHTTPS: ${newRepo.remoteUrl}\n\tSSH: ${newRepo.sshUrl}\n\n`)
-        // const { willRename } = await inquirer.prompt([
-        //   {
-        //     type: 'confirm',
-        //     name: 'willRename',
-        //     message: renameSrcRepositoryQuestion,
-        //   },
-        // ]);
+        const { dstProjectName } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'dstProjectName',
+                message: constants_1.dstProjectQuestion,
+                choices: buildProjectList(availableSrcProjects.filter((p) => p.name !== srcProjectName)),
+            }
+        ]);
+        for await (const srcRepository of srcRepositories) {
+            const cloneRepositoryPath = path.join(os.tmpdir(), `${srcRepository}.git`);
+            shell.exec(`git clone --mirror ${(_a = availableSrcRepositories.find(r => r.name === srcRepository)) === null || _a === void 0 ? void 0 : _a.sshUrl} ${cloneRepositoryPath}`);
+            const dstRepository = srcRepository;
+            console.log(`Creating repository ${dstRepository} in project ${dstProjectName}...`);
+            const newRepo = await createRepository(webApi, dstRepository, dstProjectName);
+            console.log(`Repository ${newRepo.name} created successfully!`);
+            console.log('Updating repository...');
+            shell.exec(`cd ${cloneRepositoryPath} && git push --mirror ${newRepo.sshUrl} && cd -`);
+            console.log(`\n\nClone URLs:\n\tHTTPS: ${newRepo.remoteUrl}\n\tSSH: ${newRepo.sshUrl}\n\n`);
+            const newSrcRepositoryName = `${srcRepository}_MIGRATED_TO_${dstProjectName}`;
+            console.log('Renaming Source Repository...');
+            const oldRepo = availableSrcRepositories.find((r) => r.name === srcRepository);
+            await renameRepository(webApi, oldRepo.id, newSrcRepositoryName, srcProjectName);
+            console.log('Deleting local repository...');
+            shell.exec(`rm -rf ${cloneRepositoryPath}`);
+        }
+        console.log('Migration completed successfully');
         // if (willRename) {
         //   const { newSrcRepoName } = await inquirer.prompt([
         //     {
@@ -168,8 +158,11 @@ function getShortDescription(project) {
         return project.description.substr(0, project.description.indexOf("\n")).substr(0, 100);
     return project.description.length <= 100 ? project.description : project.description.substr(0, 100);
 }
-async function listRepositories(gitApi, projectName) {
-    const repositories = await gitApi.getRepositories(projectName);
+async function listRepositories(gitApi, projectName, filter = false) {
+    let repositories = await gitApi.getRepositories(projectName);
+    if (filter) {
+        repositories = repositories.filter((r) => { var _a; return ((_a = r.name) === null || _a === void 0 ? void 0 : _a.indexOf(inactivedRepositoriesPattern)) === -1; });
+    }
     return repositories.sort((a, b) => a.name > b.name && 1 || -1);
 }
 async function getWebApi(orgUrl, token) {
