@@ -22,6 +22,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.run = void 0;
 const azdev = __importStar(require("azure-devops-node-api"));
 const inquirer = __importStar(require("inquirer"));
 const string_format_1 = __importDefault(require("string-format"));
@@ -53,7 +54,6 @@ async function execMigrator() {
         const webApi = await getWebApi(orgUrl, personalAccessToken);
         const coreApi = await webApi.getCoreApi();
         const gitApi = await webApi.getGitApi();
-        // const buildApi = await webApi.getBuildApi();
         const availableSrcProjects = await listProjects(coreApi);
         const { srcProjectName } = await inquirer.prompt([
             {
@@ -63,7 +63,6 @@ async function execMigrator() {
                 choices: buildProjectList(availableSrcProjects),
             }
         ]);
-        // console.log('Builds: ', await buildApi.getDefinitions(srcProjectName));
         const availableSrcRepositories = await listRepositories(gitApi, srcProjectName, true);
         const { srcRepositories } = await inquirer.prompt([
             {
@@ -99,29 +98,6 @@ async function execMigrator() {
             shell.exec(`rm -rf ${cloneRepositoryPath}`);
         }
         console.log('Migration completed successfully');
-        // if (willRename) {
-        //   const { newSrcRepoName } = await inquirer.prompt([
-        //     {
-        //       type: 'input',
-        //       name: 'newSrcRepoName',
-        //       message: newSrcRepositoryName,
-        //       default: `${srcRepository}_MIGRATED`,
-        //       validate: async (input): Promise<boolean | string> => {
-        //         const reposInProject = await listRepositories(gitApi, srcProjectName);
-        //         const exists = reposInProject.find((r) => r.name === input) !== undefined;
-        //         if (exists) {
-        //           return `${input} repository already exists in project ${srcProjectName}!`;
-        //         }
-        //         return true;
-        //       },
-        //     },
-        //   ]);
-        //   console.log('Renaming Source Repository...');
-        //   await renameRepository(webApi, oldRepo!.id, newSrcRepoName, srcProjectName);
-        // }
-        // console.log('Deleting local project...');
-        // shell.exec(`rm -rf ${cloneRepositoryPath}`)
-        // console.log('Migration completed successfully');
     }
     catch (err) {
         console.log('Error', err);
@@ -172,5 +148,5 @@ async function getWebApi(orgUrl, token) {
 async function run() {
     await execMigrator();
 }
-run();
+exports.run = run;
 //# sourceMappingURL=index.js.map

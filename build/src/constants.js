@@ -13,5 +13,4 @@ exports.dstRepositoryQuestion = "Destiny Repository:";
 exports.renameSrcRepositoryQuestion = "Rename Source Repository?";
 exports.newSrcRepositoryNameQuestion = "New Source Repository Name:";
 exports.orgUrlPattern = 'https://dev.azure.com/{org}';
-//nqawgrgjoqdf3p3shjochobfb525erg7yrkkibv6xp6modc7kyuq
 //# sourceMappingURL=constants.js.map

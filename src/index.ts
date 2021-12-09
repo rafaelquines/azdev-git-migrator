@@ -35,7 +35,6 @@ async function execMigrator() {
     const webApi = await getWebApi(orgUrl, personalAccessToken);
     const coreApi = await webApi.getCoreApi();
     const gitApi = await webApi.getGitApi();
-    // const buildApi = await webApi.getBuildApi();
 
     const availableSrcProjects = await listProjects(coreApi);
     const { srcProjectName } = await inquirer.prompt([
@@ -46,8 +45,6 @@ async function execMigrator() {
         choices: buildProjectList(availableSrcProjects),
       }
     ]);
-
-    // console.log('Builds: ', await buildApi.getDefinitions(srcProjectName));
 
     const availableSrcRepositories = await listRepositories(gitApi, srcProjectName, true);
     const { srcRepositories } = await inquirer.prompt([
@@ -88,31 +85,6 @@ async function execMigrator() {
     }
     console.log('Migration completed successfully');
 
-    // if (willRename) {
-    //   const { newSrcRepoName } = await inquirer.prompt([
-    //     {
-    //       type: 'input',
-    //       name: 'newSrcRepoName',
-    //       message: newSrcRepositoryName,
-    //       default: `${srcRepository}_MIGRATED`,
-    //       validate: async (input): Promise<boolean | string> => {
-    //         const reposInProject = await listRepositories(gitApi, srcProjectName);
-    //         const exists = reposInProject.find((r) => r.name === input) !== undefined;
-    //         if (exists) {
-    //           return `${input} repository already exists in project ${srcProjectName}!`;
-    //         }
-    //         return true;
-    //       },
-    //     },
-    //   ]);
-
-    //   console.log('Renaming Source Repository...');
-    //   await renameRepository(webApi, oldRepo!.id, newSrcRepoName, srcProjectName);
-    // }
-
-    // console.log('Deleting local project...');
-    // shell.exec(`rm -rf ${cloneRepositoryPath}`)
-    // console.log('Migration completed successfully');
   } catch (err) {
     console.log('Error', err);
   }
@@ -169,8 +141,6 @@ async function getWebApi(orgUrl: string, token: string) {
   return new azdev.WebApi(orgUrl, authHandler);
 }
 
-async function run() {
+export async function run() {
   await execMigrator();
 }
-
-run();
