@@ -1,7 +1,9 @@
 {
   "name": "azdev-git-migrator",
   "version": "0.0.1",
-  "description": "",
+  "author": "Rafael Quines <rafaelquines@gmail.com>",
+  "description": "azdev-git-migrator is a tool to migrate git repositories hosted on Azure DevOps from a project to another",
+  "preferGlobal": true,
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
   "bin": {
@@ -10,8 +12,21 @@
   "files": [
     "build/src"
   ],
-  "license": "Apache-2.0",
-  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rafaelquines/azdev-git-migrator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rafaelquines/azdev-git-migrator/issues"
+  },
+  "homepage": "https://github.com/rafaelquines/azdev-git-migrator",
+  "license": "MIT",
+  "keywords": [
+    "azure",
+    "devops",
+    "git",
+    "migrator"
+  ],
   "scripts": {
     "start": "node build/src/index",
     "start:dev": "nodemon",
