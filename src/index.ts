@@ -92,8 +92,9 @@ async function execMigrator() {
 
 function buildProjectList(projects: TeamProjectReference[]) {
   return projects.map((p) => {
+    const name = getShortDescription(p) ? `${p.name} - ${getShortDescription(p)}` : p.name;
     return {
-      name: `${p.name} - ${getShortDescription(p)}`,
+      name,
       value: p.name,
       short: p.name,
     }
@@ -123,9 +124,13 @@ async function createRepository(webApi: azdev.WebApi, name: string, project: str
 }
 
 function getShortDescription(project: TeamProjectReference) {
-  if (project.description?.indexOf("\n") !== -1)
-    return project.description!.substr(0, project.description!.indexOf("\n")).substr(0, 100);
-  return project.description.length <= 100 ? project.description : project.description.substr(0, 100);
+  if(project.description) {
+    if (project.description?.indexOf("\n") !== -1) {
+      return project.description.substr(0, project.description!.indexOf("\n")).substr(0, 100);
+    }
+    return project.description.length <= 100 ? project.description : project.description.substr(0, 100);
+  }
+  return undefined;
 }
 
 async function listRepositories(gitApi: GitApi, projectName: string, filter = false) {

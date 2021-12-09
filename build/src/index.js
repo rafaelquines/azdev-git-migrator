@@ -105,8 +105,9 @@ async function execMigrator() {
 }
 function buildProjectList(projects) {
     return projects.map((p) => {
+        const name = getShortDescription(p) ? `${p.name} - ${getShortDescription(p)}` : p.name;
         return {
-            name: `${p.name} - ${getShortDescription(p)}`,
+            name,
             value: p.name,
             short: p.name,
         };
@@ -130,9 +131,13 @@ async function createRepository(webApi, name, project) {
 }
 function getShortDescription(project) {
     var _a;
-    if (((_a = project.description) === null || _a === void 0 ? void 0 : _a.indexOf("\n")) !== -1)
-        return project.description.substr(0, project.description.indexOf("\n")).substr(0, 100);
-    return project.description.length <= 100 ? project.description : project.description.substr(0, 100);
+    if (project.description) {
+        if (((_a = project.description) === null || _a === void 0 ? void 0 : _a.indexOf("\n")) !== -1) {
+            return project.description.substr(0, project.description.indexOf("\n")).substr(0, 100);
+        }
+        return project.description.length <= 100 ? project.description : project.description.substr(0, 100);
+    }
+    return undefined;
 }
 async function listRepositories(gitApi, projectName, filter = false) {
     let repositories = await gitApi.getRepositories(projectName);
