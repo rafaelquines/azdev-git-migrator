@@ -1,6 +1,6 @@
 {
   "name": "azdev-git-migrator",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "Rafael Quines <rafaelquines@gmail.com>",
   "description": "azdev-git-migrator is a tool to migrate git repositories hosted on Azure DevOps from a project to another",
   "preferGlobal": true,
